@@ -214,11 +214,6 @@
                   </div>
                 </div>
               </div>
-              <div
-                brauz-id='cart-item-message'
-                brauz-data-cart-item-id='{{ item.id }}'
-                class='w-full mt-4'
-              ></div>
             </div>
           {%- endfor -%}
         </section>
@@ -228,24 +223,6 @@
           aria-labelledby='summary-heading'
           class='w-full max-w-full mt-8 xl:mt-0 xl:max-w-[360px] cart-sumary'
         >
-          {%- if settings.enable_brauz -%}
-            <!-- Order Brauz -->
-            <img
-              id='brauz-shopify-cart-change-listener'
-              src=''
-              style='display: none;'
-              onload='window.Brauz_shopify_helper_setupFindInStoreComponentInCart()'
-              onerror='window.Brauz_shopify_helper_setupFindInStoreComponentInCart()'
-
-            ></img>
-            <div
-              id='brauz-click-and-collect-config-cart-page'
-              data-sd='{{ shop.permanent_domain }}'
-              style='display: none; width: 0'
-            ></div>
-            <div id='brauz-click-and-collect-cart-page'></div>
-          {%- endif -%}
-
           <!-- Order free shipping -->
           {%- assign totalMoney = cart.total_price -%}
           {% assign cart_shipping_fee = settings.cart_shipping_fee

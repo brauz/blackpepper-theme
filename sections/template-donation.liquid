@@ -447,20 +447,6 @@
               {% endif %}
             {%- endunless -%}
           </div>
-
-          {%- if settings.enable_brauz -%}
-            <div
-              id='brauz-find-in-store-config-product-page'
-              data-sd='{{ shop.permanent_domain }}'
-              data-cvi='{{ product.first_available_variant.id }}'
-              data-hodv='{{ product.has_only_default_variant }}'
-              style='display: none; width: 0'
-            ></div>
-            <div
-              id='brauz-find-in-store-product-page'
-              class='p-6 mt-4 border md:mt-6 border-border-default md:border-0 md:p-0'
-            ></div>
-          {% endif %}
         </form>
         {% assign productWearItWith = product.metafields.related_products.complete_the_look.value %}
         {% if productWearItWith != blank %}

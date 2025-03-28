@@ -348,12 +348,6 @@
                     </div>
                   </div>
                 </div>
-
-                <div
-                  brauz-id='cart-item-message'
-                  class='w-full mt-3'
-                  brauz-data-cart-item-id='{{ item.id }}'
-                ></div>
               </div>
             {% endfor %}
           </div>
@@ -365,22 +359,6 @@
         id='minicart-actions'
         class='p-4 mt-auto border-t minicart-actions md:p-6 border-border-default'
       >
-        {%- if settings.enable_brauz -%}
-          <img
-            id='brauz-shopify-cart-change-listener'
-            src=''
-            style='display: none;'
-            onload='window.Brauz_shopify_helper_setupFindInStoreComponentInCart()'
-            onerror='window.Brauz_shopify_helper_setupFindInStoreComponentInCart()'
-
-          ></img>
-          <div
-            id='brauz-click-and-collect-config-cart-drawer'
-            data-sd='{{ shop.permanent_domain }}'
-            style='display: none; width: 0;'
-          ></div>
-          <div id='brauz-click-and-collect-cart-drawer'></div>
-        {%- endif -%}
         <!-- Start blocks -->
         <!-- Subtotals -->
         {% assign totalDifference = cart.total_discount %}
