@@ -1,0 +1,135 @@
+<!doctype html>
+<html class='no-js' lang='{{ request.locale.iso_code }}'>
+  <head>
+    <meta charset='utf-8'>
+    <meta content='IE=edge' http-equiv='X-UA-Compatible'>
+    <meta content='width=device-width,initial-scale=1' name='viewport'>
+    <meta content='' name='theme-color'>
+    <meta
+      name='viewport'
+      content='width=device-width,initial-scale=1,maximum-scale=1'
+    >
+    <link rel='canonical' href='{{ canonical_url }}'>
+    <link crossorigin href='https://cdn.shopify.com' rel='preconnect'>
+    <link rel='stylesheet' href='https://rsms.me/inter/inter.css'>
+    <link rel='preconnect' href='https://fonts.gstatic.com' crossorigin>
+    {% render 'custom-fonts' %}
+    {%- if settings.favicon != blank -%}
+      <link
+        rel='icon'
+        type='image/png'
+        href='{{ settings.favicon | image_url: width: '32', height: '32' }}'
+      >
+    {%- endif -%}
+
+    <title>
+      {{ page_title }}
+      {%- if current_tags %}
+        &ndash; tagged "{{ current_tags | join: ', ' }}"
+      {%- endif -%}
+      {%- if current_page != 1 %} &ndash; Page {{ current_page }}{% endif -%}
+      {%- unless page_title contains shop.name %}
+        &ndash; {{ shop.name -}}
+      {%- endunless -%}
+    </title>
+
+    {% if page_description %}
+      <meta name='description' content='{{ page_description | escape }}'>
+    {% endif %}
+
+    {{ content_for_header }}
+
+    {{ 'theme.css' | asset_url | stylesheet_tag }}
+    {%- comment -%}Blipping Fix for AplineJS{%- endcomment -%}
+    {% render 'global-variables' %}
+    {% render 'searchspring-init' %}
+    <script>
+      window.siteId = '{{ settings.searchspring_site_id }}';
+      window.customerId = '{{ customer.id }}';
+      window.template = '{{ template.name | append: "-page" }}';
+    </script>
+    <style>
+      [x-cloak] {
+        display: none !important;
+      }
+    </style>
+    {% render 'gtm', position: 'head' %}
+
+    {% include 'sca.storelocator' %}
+    {% render 'preezie-global-tag' %}
+    {% render 'badges-global' %}
+    {% render 'promolines-global' %}
+    {% render 'markerio' %}
+    {% comment %} {% render 'live-chat' %} BP-90 : Remove Live chat{% endcomment %}
+  </head>
+
+  <body
+    id='{{ page_title | handle }}'
+    class='template-{{ template.name | handle }}'
+  >
+    {% render 'gtm', position: 'body' %}
+    <div id='page' class='page-main-content'>
+      {% section 'announcement-bar' %}
+      {% section 'header' %}
+      {% render 'breadcrumb' %}
+
+      {% include 'minicart' %}
+      <main id='MainContent' role='main' tabindex='-1'>
+        {% liquid
+          assign page_suffix_list = 'contact, size-guide, faq, delivery,' | append: settings.page_suffix_sidebar | replace: ' ,', ',' | replace: ', ', ',' | replace: ' , ', ',' | split: ','
+          assign CMS_template = false
+          for template_name in page_suffix_list
+            if template.suffix == template_name
+              assign CMS_template = true
+            endif
+          endfor
+
+          assign page_handle_list = settings.page_name_handle | replace: ' ,', ',' | replace: ', ', ',' | replace: ' , ', ',' | split: ','
+          for page_handle in page_handle_list
+            if page.handle == page_handle
+              assign CMS_template = true
+            endif
+          endfor
+        %}
+        {% if CMS_template %}
+          {%- section 'page-title' -%}
+          <div class='flex flex-wrap px-4 page_content md:flex-nowrap lg:px-20'>
+            {%- section 'cms-nav' -%}
+            <div class='page_content lg:max-w-[calc(100%-24rem)] md:max-w-[calc(100%-20rem)] lg:pl-12 lg:ml-0.5 w-full'>
+              <div class='w-full'>
+                {{ content_for_layout }}
+              </div>
+            </div>
+          </div>
+        {% else %}
+          {{ content_for_layout }}
+        {% endif %}
+      </main>
+      {% sections 'footer-group' %}
+      {% section 'schema' %}
+      
+      {% if settings.newsletter_on_off %}
+        {% section 'newsletter-popup' %}
+      {% endif %}
+    </div>
+    <div class='hidden'>
+      <div
+        id='minicart-product-list'
+        class='h-full overflow-y-auto minicart-product-list'
+      >
+        {% section 'minicart-list' %}
+      </div>
+    </div>
+    <script src='{{ 'theme.js' | asset_url }}' defer='defer'></script>
+    <script
+      src='https://d3aq2u4yw77ivo.cloudfront.net/find-in-store/shopify/blackpepper/find-in-store.shopify.blackpepper.prod.js'
+      async
+    ></script>
+
+    <script>
+      window.MESSAGE_MAXIMUM_QTY = '{{ settings.message_maximum_qty }}';
+    </script>
+    {% render 'klaviyo-tracking' %}
+    {% section 'size-cart' %}
+  </body>
+</html>

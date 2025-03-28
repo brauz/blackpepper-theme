@@ -1,0 +1,801 @@
+{{ 'template-product.css' | asset_url | stylesheet_tag }}
+<script>
+  window.product = {{ product | json }}
+</script>
+<style>
+  .swiper-button-prev,
+  .swiper-button-next {
+    color: #000;
+    top: auto;
+    height: 20px;
+  }
+
+  .swiper-button-prev::after,
+  .swiper-button-next::after {
+    font-size: 20px;
+  }
+
+  .swiper-pagination-bullet-active {
+    background: #000;
+  }
+</style>
+
+{%- assign selected_variant = product.selected_or_first_available_variant -%}
+
+<div class='pt-5 mx-auto lg:max-w-7xl sm:pt-10 sm:px-6 lg:px-0'>
+  <div class='max-w-2xl mx-auto lg:max-w-none product-detail lg:pb-20'>
+    <!-- Product -->
+    <div class='flex flex-col product-info-container lg:block'>
+      <!-- Image gallery -->
+      <div
+        class='flex relative flex-col-reverse lg:w-3/5 lg:pr-16 lg:float-left mt-4 lg:mt-0 min-h-[300px]'
+        id='product-gallery'
+        data-sale='{{ 'sections.product.sale' | t }}'
+      ></div>
+      <div class='hidden' id='badge'>
+        {% render 'badges' %}
+      </div>
+
+      <!-- Product info -->
+      <div class='title-container px-4 sm:px-0 lg:w-2/5 lg:pl-[18px] lg:float-right -order-1'>
+        <div class='flex justify-between top-container'>
+          <h1 class='mb-2.5 lg:mb-3 product-tilte h3 w-3/5'>
+            {{ product.title }}
+          </h1>
+          <div
+            id='price-{{ section.id }}'
+            class='flex flex-wrap justify-end w-2/5 gap-2'
+          >
+            {%- if selected_variant.compare_at_price != blank
+              and selected_variant.compare_at_price > selected_variant.price
+            -%}
+              <span class='line-through h3 text-grey-500'>
+                {{- selected_variant.compare_at_price | money -}}
+              </span>
+
+              <span class='text-border-error h3 final-price'>
+                {{- selected_variant.price | money -}}
+              </span>
+            {%- else -%}
+              <span class='leading-x30 h3 final-price'>
+                {{- selected_variant.price | money -}}
+              </span>
+            {%- endif -%}
+          </div>
+        </div>
+
+        <div class='hidden lg:block'>
+          {% render 'pdp-promolines' %}
+        </div>
+
+        <!-- Product reviews -->
+        <div class='product--reviews'>
+          {%- for block in section.blocks -%}
+            {%- case block.type -%}
+              {%- when '@app' -%}
+                {% render block %}
+            {%- endcase -%}
+          {%- endfor -%}
+        </div>
+
+        {% if selected_variant.sku != blank %}
+          <div class='mt-0.5 lg:mt-3 sku-text'>
+            <span class='text-sm uppercase text-grey-500 tracking-widelight'>
+              SKU <span class='variant-sku'>{{ selected_variant.sku }}</span>
+            </span>
+          </div>
+        {%- endif -%}
+      </div>
+      <div class='px-4 sm:px-0 lg:w-2/5 lg:mt-0 lg:pl-[18px] lg:float-right'>
+        {%- unless product.template_suffix == 'giftcard' -%}
+          {% liquid
+            assign has_related_products = false
+            for tag in product.tags
+              assign dtag = tag | downcase
+              if dtag contains 'stylecode-'
+                assign has_related_products = true
+              endif
+            endfor
+          %}
+          <div class='lg:hidden'>
+            {% render 'pdp-promolines' %}
+          </div>
+          {% if has_related_products %}
+            <div class='mb-6 lg:mt-6'>
+              <p class='p-0 m-0 mb-2 font-semibold leading-5 text-brand-text-grey text-11'>
+                {{ 'sections.product.colour' | t -}}
+                :<span class='ml-1 font-normal'>
+                  {{- product.metafields.products.colour_name -}}
+                </span>
+              </p>
+              <div
+                id='product-swatches'
+                data-product-tags='{{ product.tags | join: ',' |  escape }}'
+                class='product-swatches min-h-[96px]'
+              ></div>
+            </div>
+          {% endif %}
+          {% unless product.has_only_default_variant %}
+            <div class='relative flex flex-wrap items-center justify-between list_options'>
+              {% liquid
+                assign variant_selected = selected_variant.title
+                if selected_variant.title contains '/ '
+                  assign variant_selected = selected_variant.title | split: '/ ' | last
+                endif
+              %}
+              <p class='w-full p-0 m-0 mb-2 text-base font-semibold text-brand-text-grey'>
+                {%- if product.template_suffix == 'giftcard' -%}
+                  {{ 'sections.product.gift' | t }}
+                {%- else -%}
+                  {{ 'sections.product.size' | t }}
+                {%- endif -%}
+                :<span class='ml-2 text-base font-normal option-title text-grey-700'>
+                  {{- variant_selected -}}
+                </span>
+              </p>
+              <p
+                id='btn_size_guide'
+                class='!absolute top-0 right-0 p-0 m-0 underline cursor-pointer link btn-sizeguide'
+              >
+                {{ 'sections.product.size_guide' | t }}
+              </p>
+              <div class='grid items-center justify-center w-full grid-cols-4 gap-3'>
+                {% for option in product.options_with_values %}
+                  {% if option.name == 'Size' %}
+                    {%- for variant in product.variants -%}
+                      {% liquid
+                        assign variant_title = variant.title
+                        if variant.title contains '/ '
+                          assign variant_title = variant.title | split: '/ ' | last
+                        endif
+                      %}
+                      <div
+                        data-value='{{ variant_title | escape }}'
+                        class='item_option flex flex-wrap items-center h-14 border border-border-default text-brand-text-grey justify-center cursor-pointer hover:border-primary {% if variant.inventory_quantity == 0 or variant.inventory_quantity < 0 %} out-stock hover:border-border-default {% endif %} {% if option.selected_value == variant.title %}active{% endif %}'
+                        data-option='options-{{ option.name | escape }}'
+                      >
+                        {{ variant_title | escape }}
+                      </div>
+                    {%- endfor -%}
+                  {% endif %}
+                {% endfor %}
+              </div>
+            </div>
+          {% endunless %}
+
+          {% assign buy_later_tabs = section.blocks
+            | where: 'type', 'buy_later_option'
+          %}
+          {%- if buy_later_tabs.size > 0 -%}
+            <div id='section_bnpl' class='hidden'>
+              <div
+                id='options_buy_popup'
+                class='bg-grey-600 w-full max-w-full lg:max-w-2xl mx-auto pt-6 px-4 pb-4 lg:p-10 fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[51] h-full max-h-full lg:max-h-[700px] overflow-y-auto hidden border border-border-default'
+              >
+                <div class='text-center'>
+                  <span
+                    id='btn_close_buy_popup'
+                    class='absolute inline-block w-4 h-4 p-0 m-0 border-0 cursor-pointer top-4 right-4 bg-inherit text-brand-text-grey'
+                  >
+                    {%- render 'icon-close', class: 'w-4 h-4' -%}
+                  </span>
+                  <h2 class='p-0 mb-6 font-normal text-center uppercase leading-tiny text-brand-text-grey'>
+                    Wear this now, pay later with
+                  </h2>
+                  <ul
+                    id='options_buy_tab_title'
+                    class='flex flex-wrap items-center justify-center'
+                  >
+                    {%- for block in buy_later_tabs -%}
+                      <li class='mr-4 last:mr-0'>
+                        <a
+                          href='#block-{{ block.id }}'
+                          class='tab-item relative block text-center uppercase font-normal leading-tiny text-brand-text-grey px-5 py-3 no-underline hover:border-b hover:border-border-default{% if forloop.first %} active{% endif %}'
+                        >
+                          {{- block.settings.tab_title -}}
+                        </a>
+                      </li>
+                    {% endfor %}
+                  </ul>
+                </div>
+
+                <div class='w-full mt-6'>
+                  <ul id='options_buy_tab_content'>
+                    {%- for block in buy_later_tabs -%}
+                      <li
+                        id='block-{{ block.id }}'
+                        class='{% if forloop.first %}active{% else %}hidden{% endif %}'
+                      >
+                        {% if block.settings.image_desktop != blank %}
+                          <img
+                            src='{{ block.settings.image_desktop | img_url: 'master' }}'
+                            class='w-full text-center rounded-xl {% if block.settings.image_mobile != blank %}lg:block hidden{% else %}block{% endif %}'
+                          >
+                          {% if block.settings.image_mobile != blank %}
+                            <img
+                              src='{{ block.settings.image_mobile | img_url: 'master' }}'
+                              class='block w-full text-center lg:hidden rounded-xl'
+                            >
+                          {% endif %}
+                        {% endif %}
+                        {% if block.settings.content != blank %}
+                          <div class='font-normal{% if block.settings.image_desktop != blank %} mt-6{% endif %}'>
+                            {{ block.settings.content }}
+                          </div>
+                        {% endif %}
+                      </li>
+                    {% endfor %}
+                  </ul>
+                  #
+                </div>
+              </div>
+              <span
+                id='bgOverlay'
+                class='fixed top-0 bottom-0 left-0 right-0 z-50 hidden w-full h-full bg-dark-overlay'
+              ></span>
+            </div>
+          {% endif %}
+        {%- endunless -%}
+
+        <form
+          class='lg:mt-6'
+          method='post'
+          action='/cart/add'
+          id='product-form'
+        >
+          <input
+            type='hidden'
+            name='id'
+            value='{{ product.selected_or_first_available_variant.id }}'
+          >
+          <!-- Colors -->
+          <div class='{%- unless product.template_suffix == 'giftcard' -%}hidden{%- endunless -%}'>
+            <fieldset class='mb-2'>
+              {%- unless product.has_only_default_variant -%}
+                <variant-selector
+                  data-url='{{ product.url }}'
+                  data-section='{{ section.id }}'
+                >
+                  {%- for option in product.options_with_values -%}
+                    <div class='option-container'>
+                      <p class='w-full p-0 m-0 mb-2 text-base font-semibold text-brand-text-grey'>
+                        {{ 'sections.product.gift' | t -}}
+                        :<span class='ml-2 text-base font-normal option-title text-grey-700'>
+                          {{- option.selected_value -}}
+                        </span>
+                      </p>
+                      <div class='my-2 field__select'>
+                        <select
+                          class='w-full px-3 py-1 border border-border-default option-Size gift-card-variant'
+                          id='Option-{{ section.id }}-{{ forloop.index0 }}'
+                          name='options-{{ option.name | escape }}'
+                        >
+                          {%- for value in option.values -%}
+                            {%- if option.selected_value == value -%}
+                              <option
+                                selected='selected'
+                                value='{{ value | escape }}'
+                              >
+                                {{ value }}
+                              </option>
+                            {%- else -%}
+                              <option value='{{ value | escape }}'>
+                                {{ value }}
+                              </option>
+                            {%- endif -%}
+                          {%- endfor -%}
+                        </select>
+                        <label
+                          class='text-sm textr-copyColor'
+                          for='Option-{{ section.id }}-{{ forloop.index0 }}'
+                        >
+                          {{- option.name -}}
+                        </label>
+                      </div>
+                    </div>
+                  {%- endfor -%}
+                  <script type='application/json'>
+                    {{ product.variants | json }}
+                  </script>
+                </variant-selector>
+              {%- endunless -%}
+            </fieldset>
+          </div>
+
+          {%- unless product.template_suffix == 'giftcard' -%}
+            {%- if buy_later_tabs.size > 0 -%}
+              <!-- Buy with options -->
+              <div class='mt-3 mb-4'>
+                <p class='flex items-center p-0 m-0 font-normal leading-5 text-brand-text-grey text-11'>
+                  {{ 'sections.product.by_with_option' | t }}
+                  <span
+                    id='btn_options_buy'
+                    class='ml-1 underline cursor-pointer text-grey-400 hover:text-brand-text-grey'
+                  >
+                    {{-
+                      section.settings.afterpay_icon
+                      | img_url: '80x18'
+                      | img_tag
+                    -}}
+                  </span>
+                </p>
+              </div>
+            {%- endif -%}
+          {% endunless %}
+
+          {%- if product.template_suffix == 'giftcard' -%}
+            {% capture src_url %}{{ 'giftcard-validation.js' | asset_url }}{% endcapture %}
+            {% render 'atom_script',
+              src: src_url,
+              priority: 'normal',
+              type: 'defer'
+            %}
+            <div class='mt-2' id='gift_card_form'>
+              <div class='grid items-center justify-center grid-cols-1 gap-4'>
+                <div class='flex grid flex-wrap grid-cols-1 gap-4 lg:grid-cols-2'>
+                  <div class='w-full'>
+                    <div class='field__input'>
+                      <input
+                        autocomplete='sender_name'
+                        class='w-full'
+                        id='sender_name'
+                        name='properties[Sender name]'
+                        placeholder='{{ 'gift_card_product.sender_name' | t }}'
+                        type='text'
+                        required
+                      >
+                      <label for='sender_name'>
+                        {{- 'gift_card_product.sender_name' | t -}}
+                      </label>
+                    </div>
+                  </div>
+                  <div class='w-full'>
+                    <div class='field__input'>
+                      <input
+                        autocomplete='sender_email'
+                        class='w-full'
+                        id='sender_email'
+                        name='properties[Sender email]'
+                        placeholder='{{ 'gift_card_product.sender_email' | t }}'
+                        type='text'
+                        required
+                      >
+                      <label for='sender_email'>
+                        {{- 'gift_card_product.sender_email' | t -}}
+                      </label>
+                    </div>
+                  </div>
+                </div>
+
+                <div class='flex grid flex-wrap grid-cols-1 gap-4 lg:grid-cols-2'>
+                  <div class='w-full'>
+                    <div class='field__input'>
+                      <input
+                        autocomplete='recipient_name'
+                        class='w-full'
+                        id='recipient_name'
+                        name='properties[Recipient name]'
+                        placeholder='{{ 'gift_card_product.recipient_name' | t }}'
+                        type='text'
+                        required
+                      >
+                      <label for='recipient_name'>
+                        {{- 'gift_card_product.recipient_name' | t -}}
+                      </label>
+                    </div>
+                  </div>
+                  <div class='w-full'>
+                    <div class='field__input'>
+                      <input
+                        autocomplete='recipient_email'
+                        class='w-full'
+                        id='recipient_email'
+                        name='properties[Recipient email]'
+                        placeholder='{{ 'gift_card_product.recipient_email' | t }}'
+                        type='text'
+                        required
+                      >
+                      <label for='recipient_email'>
+                        {{- 'gift_card_product.recipient_email' | t -}}
+                      </label>
+                    </div>
+                  </div>
+                </div>
+
+                <div class='w-full mb-4 field__input field__textarea'>
+                  <textarea
+                    class='w-full h-[120px]'
+                    id='gift_message'
+                    placeholder='{{ 'gift_card_product.message' | t }}'
+                    name='properties[Message]'
+                  ></textarea>
+                  <label for='gift_message'>
+                    {{- 'gift_card_product.message' | t -}}
+                  </label>
+                </div>
+              </div>
+            </div>
+          {%- endif -%}
+
+          <div
+            id='productFormButton'
+            data-sold-out='{{ 'sections.product.sold_out' | t }}'
+            data-add-cart='{{ 'sections.product.add_to_bag' | t }}'
+            class='{%- unless product.template_suffix == 'giftcard' -%}mt-6{% else %}mt-2{% endunless %} flex flex-wrap sm:flex-col1 relative overflow-hidden relative'
+          >
+            {%- if selected_variant.available == false -%}
+              <button
+                class='w-full m-0 mb-0 uppercase medium h-14 opcity-0'
+                disabled
+                name='add'
+                type='submit'
+              >
+                {{ 'sections.product.sold_out' | t }}
+              </button>
+            {%- else -%}
+              <button
+                type='submit'
+                aria-label='add to cart'
+                name='add'
+                class='btn-filled m-0 medium h-14 hidden uppercase w-full{% if product.template_suffix == 'giftcard' %} gift-product{%- else -%} {% if product.metafields.custom.in_store_only == true %} mb-3{% endif %} {% endif %}'
+                id='btn-addToCart'
+              >
+                <span class='mr-3 price-base'>
+                  {{- 'sections.product.add_to_bag' | t -}}
+                </span>
+                •
+                <span id='btn-price' class='ml-3 btn-price'>
+                  {{- selected_variant.price | money -}}
+                </span>
+              </button>
+
+              <button
+                class='pointer-events-none m-0 medium h-14 uppercase w-full opcity-0 mb-0 require_select hidden !text-base !leading-x22 rounded-sm !text-grey-500 border-0'
+                name='add'
+                type='submit'
+              >
+                {{ 'sections.product.selected_item' | t }}
+              </button>
+            {%- endif -%}
+            {% render 'wk-pdp-button' %}
+
+            {%- unless product.template_suffix == 'giftcard' -%}
+              {% if product.metafields.custom.in_store_only == true %}
+                <button
+                  type='button'
+                  aria-label='find in store'
+                  name='findInStore'
+                  class='w-full m-0 uppercase btn-secondary medium h-14'
+                >
+                  {{ 'sections.product.find_in_store' | t }}
+                </button>
+              {% endif %}
+            {%- endunless -%}
+          </div>
+          {% if section.settings.enable_customer_cta == true %}
+            {% unless customer %}
+              <div class='hidden px-2 my-4 lg:mb-3 w-fit p2 bg-brand-accent-linen login-text lg:block'>
+                <span class=''>
+                  {{- 'sections.product.rewards-text' | t }} |
+                  <a
+                    href='/account/login'
+                    class=''
+                  >
+                    {{- 'sections.product.login-text' | t -}}
+                  </a></span
+                >
+              </div>
+            {% endunless %}
+          {% endif %}
+          {%- if settings.enable_brauz -%}
+            <div
+              id='brauz-find-in-store-config-product-page'
+              data-sd='{{ shop.permanent_domain }}'
+              data-cvi='{{ product.first_available_variant.id }}'
+              data-hodv='{{ product.has_only_default_variant }}'
+              style='display: none; width: 0'
+            ></div>
+            <div
+              id='brauz-find-in-store-product-page'
+              class='p-6 mt-4 border md:mt-6 border-border-default md:border-0 md:p-0'
+            ></div>
+          {% endif %}
+        </form>
+        {% assign productWearItWith = product.metafields.related_products.complete_the_look.value %}
+
+        {% if productWearItWith != blank %}
+          <div class='py-6 pb-0 mb-4 border-t border-solid product-wear border-border-default lg:mb-0'>
+            <h3 class='mb-3 text-lg font-semibold leading-x30 text-brand-text-grey lg:mb-4'>
+              Complete the look
+            </h3>
+            {% for item in productWearItWith limit: 2 %}
+              <div class='relative flex items-start w-full gap-4 pb-16 mb-6 item product-wear-item lg:static lg:pb-0 last:mb-0'>
+                <div class='product-image overflow-hidden w-[100px] lg:w-[150px]'>
+                  <a href='{{ item.url }}' class='block w-full h-full'>
+                    <img
+                      class='w-full h-auto product_images'
+                      width='100'
+                      height='134'
+                      src='{{ item.featured_image | img_url: 'master' }}'
+                    >
+                  </a>
+                </div>
+
+                <div class='info w-[calc(100%-116px)] flex flex-wrap justify-between flex-col min-h-[134px] my-auto'>
+                  <div class='flex flex-row items-baseline justify-between w-full title product_name'>
+                    <a
+                      href='{{ item.url }}'
+                      class='text-base font-medium no-underline text-brand-text-grey opacity-1'
+                    >
+                      {{- item.title -}}
+                    </a>
+                    <span class='ml-4 text-base font-medium info-price price text-brand-text-grey opacity-1'>
+                      {{- item.variants.first.price | money -}}
+                    </span>
+                  </div>
+                  <div class='relative data-variants product-wear-variants lg:w-auto'>
+                    <p class='m-0 text-sm leading-5 text-brand-text-grey whitespace-nowrap'>
+                      Colour:
+                      {{
+                        item.metafields.products.colour_name
+                        | downcase
+                        | capitalize
+                      }}
+                    </p>
+                  </div>
+                  <div class='flex flex-wrap items-center w-full h-full mt-2 action-button lg:flex-nowrap lg:gap-2'>
+                    <div class='relative flex items-center justify-between w-full gap-4 lg:flex-col lg:justify-normal lg:items-start lg:gap-0 lg:w-1/2 data-variants product-wear-variants grow'>
+                      {% liquid
+                        assign variant_selected = item.variants.first.title
+                        if variant_selected contains '/ '
+                          assign variant_selected = variant_selected | split: '/ ' | last
+                        endif
+                      %}
+
+                      <p class='m-0 text-sm font-semibold leading-5 text-brand-text-grey whitespace-nowrap varitant-title'>
+                        Size:
+                      </p>
+                      <div class='flex items-center px-4 border border-border-default border-solid rounded-sm py-2.5 h-[52px] cursor-pointer w-full lg:w-full relative open-size-variant'>
+                        <p class='m-0 pr-2.5 text-base text-grey-700 truncate whitespace-nowrap text-variant'>
+                          Select
+                        </p>
+                        <p class='absolute text-brand-text-grey right-3.5 p-0 top-4'>
+                          {% render 'icon_down' %}
+                        </p>
+                      </div>
+                      <div class='absolute top-[74px] w-[140px] p-4 border border-border-default rounded-sm bg-white z-30 hidden complete-options variant-product'>
+                        {%- unless item.has_only_default_variant -%}
+                          {%- for option in item.options_with_values -%}
+                            {% if option.name == 'Size' %}
+                              {% for variant in item.variants %}
+                                {% liquid
+                                  assign variant_title = variant.title
+                                  if variant.title contains '/ '
+                                    assign variant_title = variant.title | split: '/ ' | last
+                                  endif
+                                %}
+                                <p
+                                  class='item_variant_wear whitespace-nowrap m-0 p-0.5 variant-size-{{ variant_title | escape }} cursor-pointer {% if variant.inventory_quantity == 0 %}out-stock text-grey-400 border-grey-5 pointer-events-none line-through{%- else -%} hover:bg-brand-neutral-tint border-border-default {% endif %}'
+                                  data-id='{{ variant.id }}'
+                                  data-value-wear='{{ variant_title | escape }}'
+                                  data-value='{{ variant_title | escape }}'
+                                  data-stock='{{variant.inventory_quantity}}'
+                                  {% if variant.inventory_quantity == 0
+                                    and variant.inventory_quantity < 0
+                                  %}
+                                    disabled
+                                  {% endif %}
+                                >
+                                  {{ variant_title }}
+                                </p>
+                              {%- endfor -%}
+                            {%- endif -%}
+                            <script type='application/json'>
+                              {{ item.variants | json }}
+                            </script>
+                          {%- endfor -%}
+                        {%- endunless -%}
+                      </div>
+                    </div>
+
+                    <button
+                      class='btn-primary h-[52px] absolute left-0 bottom-0 lg:static px-8 complete_quick_add w-full lg:w-auto ml-auto mt-auto'
+                      id='quick_add'
+                      variant-id='{{ item.variants.first.id }}'
+                      base-url='{{ shop.url }}'
+                      {% if item.variants.first.inventory_quantity == 0 %}
+                        disabled
+                      {% endif %}
+                      handle='{{ shop.url }}/products/{{ item.handle }}'
+                    >
+                      <span class='hidden lg:block'>
+                        {{- 'sections.product.add' | t -}}
+                      </span>
+                      <span class='block lg:hidden'>
+                        {{- 'sections.product.add_to_bag' | t -}}
+                      </span>
+                      <span class='hidden sold-out'>
+                        {{- 'sections.product.sold_out' | t -}}
+                      </span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+<div class='clear-both m-0 mb-4 lg:mb-20'></div>
+{% if section.settings.enable_customer_cta %}
+  {% unless customer %}
+    <div class='flex items-center justify-center py-5 mx-4 mb-4 bg-brand-accent-linen lg:py-10 lg:mx-0 lg:mb-0'>
+      <div class='w-full text-center p2 login-container'>
+        <h3 class='mb-1.5 lg:mb-1 h3'>{{ section.settings.customer_title }}</h3>
+        <span class='inline-block mb-4 lg:mb-6'>
+          {{- section.settings.customer_content -}}
+        </span>
+        <div class='action-container'>
+          <a
+            href='/account/login'
+            class='relative inline-block pr-4 mr-4 login-link border-grey-900'
+          >
+            {{- 'sections.product.login-text' | t -}}
+          </a>
+          <a href='/account/register' class='inline-block'>
+            {{- 'sections.product.register-text' | t -}}
+          </a>
+        </div>
+      </div>
+    </div>
+  {%- endunless -%}
+{% endif %}
+
+{%- unless product.template_suffix == 'giftcard' -%}
+  <div class='flex flex-wrap clear-both px-4 py-8 pb-4 mx-4 detail-sections lg:px-20 lg:py-20 bg-grey-600 lg:mx-0'>
+    {% if product.description != blank %}
+      <div class='detail-container lg:w-1/2 lg:pr-14 lg:border-r border-[#dcdcdc] pb-7 lg:pb-0'>
+        <h3>{{ 'sections.product.product_details' | t }}</h3>
+        {{ product.description }}
+      </div>
+    {% endif %}
+    <div class='w-full sizeguide-container lg:hidden'>
+      <h3 class='sizeguide-title flex items-center pt-7 mb-7 lg:mb-4 border-t lg:border-t-0 border-[#dcdcdc]'>
+        {% render 'plus', class: 'lg:hidden mr-4' %}
+        {{ 'sections.product.product_size_label' | t }}
+      </h3>
+    </div>
+    <div class='delivery-container lg:w-1/2 lg:pl-[60px] w-full'>
+      {%- if section.blocks.size > 0 -%}
+        {%- for block in section.blocks -%}
+          {%- case block.type -%}
+            {%- when 'accordion_delivery' -%}
+              <h3 class='delivery-title flex items-center pt-7 lg:pt-0 mb-7 lg:mb-4 w-full border-t lg:border-t-0 border-[#dcdcdc]'>
+                {% render 'plus', class: 'lg:hidden icon-plus mr-4' %}
+                {% render 'minus', class: 'lg:hidden icon-minus ml-0.5 mr-4' %}
+                {{ 'sections.product.product_delivery' | t }}
+              </h3>
+              {% assign accor_delivery = 'sections.product.accor_delivery'
+                | t
+              %}
+              {% assign delivery_content = block.settings.content %}
+              <div class='overflow-hidden delivery-content'>
+                {{ block.settings.content }}
+              </div>
+          {%- endcase -%}
+        {%- endfor -%}
+      {%- endif -%}
+    </div>
+  </div>
+{%- endunless -%}
+{% if section.settings.enable_customer_cta == true %}
+  {% unless customer %}
+    <div class='px-2 py-2 mx-4 my-2 bg-brand-accent-linen login-text lg:hidden'>
+      <span class='block w-full text-center'>
+        {{- 'sections.product.rewards-text' | t }} |
+        <a
+          href='/account/login'
+          class=''
+        >
+          {{- 'sections.product.login-text' | t -}}
+        </a></span
+      >
+    </div>
+  {% endunless %}
+{% endif %}
+
+<!-- Searchspring IntelliSuggest Tracking -->
+<script
+  type='text/javascript'
+  src='//cdn.searchspring.net/intellisuggest/is.min.js'
+></script>
+<!-- END Searchspring IntelliSuggest -->
+
+{% capture src_url %}{{ 'template-product.js' | asset_url }}{% endcapture %}
+{% render 'atom_script', src: src_url, priority: 'normal', type: 'defer' %}
+
+{% capture src_url %}{{ 'product-swatches-init.js' | asset_url }}{% endcapture %}
+{% render 'atom_script', src: src_url, priority: 'normal', type: 'defer' %}
+
+{% capture src_url %}{{ 'product-gallery.js' | asset_url }}{% endcapture %}
+{% render 'atom_script', src: src_url, priority: 'important', type: 'async' %}
+
+{% schema %}
+{
+  "name": "Product",
+  "settings": [
+    {
+      "type": "checkbox",
+      "label": "Enable customer call to action",
+      "id": "enable_customer_cta",
+      "default": false,
+      "info": "Controls whether the loyalty call out is displayed under SKU and below product details."
+    },
+    {
+      "type": "text",
+      "label": "Customer section title",
+      "id": "customer_title",
+      "default": "Peppercorn Loyalty Program"
+    },
+    {
+      "type": "text",
+      "label": "Customer section content",
+      "id": "customer_content",
+      "default": "You may have rewards to claim"
+    },
+    {
+      "type": "image_picker",
+      "id": "afterpay_icon",
+      "label": "Afterpay icon"
+    }
+  ],
+  "blocks": [
+    {
+      "type": "@app"
+    },
+    {
+      "name": "Buy later option",
+      "type": "buy_later_option",
+      "settings": [
+        {
+          "type": "text",
+          "label": "Tab title",
+          "id": "tab_title"
+        },
+        {
+          "type": "image_picker",
+          "label": "Image (desktop)",
+          "id": "image_desktop"
+        },
+        {
+          "type": "image_picker",
+          "label": "Image (mobile)",
+          "id": "image_mobile"
+        },
+        {
+          "type": "richtext",
+          "label": "Content",
+          "id": "content"
+        }
+      ]
+    },
+    {
+      "name": "Delivery",
+      "type": "accordion_delivery",
+      "settings": [
+        {
+          "type": "richtext",
+          "label": "Content",
+          "id": "content",
+          "default": "<p>Content...</p>"
+        }
+      ]
+    }
+  ],
+  "default": {
+    "blocks": []
+  }
+}
+{% endschema %}

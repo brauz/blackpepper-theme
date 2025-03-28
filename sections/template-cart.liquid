@@ -1,0 +1,454 @@
+{{ 'template-cart.css' | asset_url | stylesheet_tag }}
+
+{%- if cart.item_count > 0 -%}
+  <div class='bg-white' id='cart-template'>
+    <div class='px-4 mx-auto mt-6 mb-8 xl:px-20 lg:mb-16 lg:mt-12'>
+      <div class='flex items-start flex-wrap gap-0 xl:gap-10 xl:gap-x-[90px]'>
+        <section
+          aria-labelledby='cart-heading'
+          class='w-full xl:w-[calc(100%-408px)] xl:w-[calc(100%-450px)]'
+        >
+          <h1 class='p-0 m-0 mb-4 text-xl font-semibold lg:text-2xl lg:leading-9 text-brand-text-grey'>
+            {{ 'cart.shopping_bar' | t }}
+          </h1>
+          {% if customer == null %}
+            <div class='block w-full p-5 mb-4 rounded-sm box-voucher'>
+              <h4 class='m-0 p-0 text-brand-text-grey font-semibold text-base tracking-widelight mb-1.5'>
+                {{ section.settings.vouchers_title }}
+              </h4>
+              <div class='flex flex-wrap items-center justify-between lg:flex-nowrap'>
+                <p class='p-0 m-0 text-base font-normal text-grey-700 tracking-widelight'>
+                  {{ section.settings.vouchers_info }}
+                </p>
+                <div class='flex items-center w-full mt-4 lg:mt-0 lg:w-fit'>
+                  <a
+                    href='{{ routes.account_login_url }}'
+                    class='border-r border-primary pr-4 mr-4 text-brand-text-grey text-base font-normal tracking-widelight whitespace-nowrap underline leading-[.85rem] link'
+                  >
+                    {{- 'customer.log_in' | t -}}
+                  </a>
+                  <a
+                    href='{{ routes.account_register_url }}'
+                    class='text-base font-normal leading-6 underline text-brand-text-grey tracking-widelight link whitespace-nowrap'
+                  >
+                    {{- 'customer.sign_up' | t -}}
+                  </a>
+                </div>
+              </div>
+            </div>
+          {% endif %}
+
+          {%- for item in cart.items -%}
+            <div class='flex flex-col py-4 mb-4 border-b cart-items-list cart__items border-border-default lg:py-5 last:mb-0'>
+              <div class='flex w-full'>
+                <div class='m-0 cart-item-media shrink-0'>
+                  <a href='{{ item.url }}'>
+                    {%- if item.image -%}
+                      <img
+                        src='{{ item.image | image_url: width: 70 }}'
+                        alt='{{ item.title | escape }}'
+                        width='{{ item.image.width }}'
+                        height='{{ item.image.height }}'
+                        class='object-cover object-center w-16 h-20 rounded-sm lg:w-20 lg:h-24'
+                        loading='lazy'
+                      >
+                    {% else %}
+                      {{
+                        'product-2'
+                        | placeholder_svg_tag: 'w-20 h-20 object-center object-cover lg:h-24'
+                      }}
+                    {% endif %}
+                  </a>
+                </div>
+
+                <div class='cart-item-description flex items-center justify-between gap-x-6 ml-4 pl-0 lg:flex-row w-[calc(100%-80px)] xl:w-[calc(100%-115px)]'>
+                  <div class='mb-1 left-contain lg:mb-0'>
+                    <div class='relative lg:static'>
+                      <div class='flex flex-wrap justify-between lg:pr-0'>
+                        <!--
+                          {% if item.product.vendor != blank %}
+                            <p class='no-underline text-brand-text-grey text-input !mb-0 font-bold w-full'>
+                              {{ item.product.vendor }}
+                            </p>
+                          {% endif %}
+                        -->
+                        <p class='w-full mb-1'>
+                          <a
+                            href='{{ item.url }}'
+                            class='w-full p-0 m-0 overflow-hidden text-base font-semibold no-underline truncate text-brand-text-grey tracking-widelight link text-ellipsis'
+                          >
+                            {{ item.product.title }}
+                          </a>
+                        </p>
+                      </div>
+                      <div class='flex flex-col mb-0.5 lg:mb-0'>
+                        {% unless item.product.has_only_default_variant %}
+                          {% for option in item.product.options %}
+                            <span class='text-base font-normal cart-item--option-name text-grey-700 tracking-widelight'>
+                              {{- option }}:
+                              {{ item.variant.options[forloop.index0] -}}
+                            </span>
+                          {% endfor %}
+                        {% endunless %}
+
+                        <!--
+                          {% if item.properties.customSize != blank %}
+                            <span class="cart-item--option-name text-input text-grey-500">Size: {{ item.properties.customSize }}</span>
+                          {% endif %}
+
+                          {% if item.properties.customWidth != blank %}
+                            <span class="block w-full cart-item--option-name text-input text-grey-500">Width: {{ item.properties.customWidth }}</span>
+                          {% endif %}
+                        -->
+                        {% if item.discounts.size > 0 %}
+                          <ul
+                            class='mb-1 list-unstyled lg:mb-2'
+                            role='list'
+                            aria-label='Discounts'
+                          >
+                            {%- for discount in item.discounts -%}
+                              <li class='flex items-center gap-2 text-sm tracking-widelight text-brand-text-grey'>
+                                <span class='block w-4 h-4'>
+                                  {%- render 'icon-discount' -%}
+                                </span>
+                                {{ discount.title }}
+                              </li>
+                            {%- endfor -%}
+                          </ul>
+                        {% endif %}
+                      </div>
+
+                      <div class='xl:hidden'>
+                        <p class='right-0 top-6 mt-0 mb-0 flex xl:flex-col xl:flex-row items-center gap-x-1.5 '>
+                          {% liquid
+                            assign item_price = item.final_line_price
+                            assign compare_at_price = item.variant.compare_at_price | times: item.quantity
+                            assign comparison = compare_at_price
+                            if compare_at_price < item_price
+                              assign comparison = item.original_line_price
+                            endif
+                          %}
+
+                          {% if comparison > item_price %}
+                            <span class='text-base font-medium compare-price tracking-widelight text-brand-accent-sale'>
+                              {{- item_price | money -}}
+                            </span>
+                            <span class='text-base font-medium tracking-normal price-mini-cart text-grey-500'>
+                              <span class='tracking-normal line-through'>
+                                {{- comparison | money -}}
+                              </span>
+                            </span>
+                          {% else %}
+                            <span class='block mb-0 text-base font-medium price-mini-cart tracking-widelight text-brand-text-grey'>
+                              {{- item_price | money -}}
+                            </span>
+                          {% endif %}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                  <div class='flex right-contain cart-details'>
+                    <div class='block gap-y-2.5 xl:flex items-center w-auto xl:gap-x-8 xl:gap-y-0'>
+                      <p class='right-0 flex-col items-center hidden gap-2 mt-0 mb-0 top-6 xl:flex xl:flex-row'>
+                        {% liquid
+                          assign item_price = item.final_line_price
+                          assign compare_at_price = item.variant.compare_at_price | times: item.quantity
+                          assign comparison = compare_at_price
+                          if compare_at_price < item_price
+                            assign comparison = item.original_line_price
+                          endif
+                        %}
+
+                        {% if comparison > item_price %}
+                          <span class='text-base font-medium compare-price tracking-widelight text-brand-accent-sale'>
+                            {{- item_price | money -}}
+                          </span>
+                          <span class='text-base font-medium tracking-normal price-mini-cart text-grey-500'>
+                            <span class='tracking-normal line-through'>
+                              {{- comparison | money -}}
+                            </span>
+                          </span>
+                        {% else %}
+                          <span class='block mb-0 text-base font-medium price-mini-cart tracking-widelight text-brand-text-grey'>
+                            {{- item_price | money -}}
+                          </span>
+                        {% endif %}
+                      </p>
+
+                      <div
+                        class='flex flex-wrap items-center justify-center w-16 h-12 m-0 font-normal border rounded-sm button-change-qty-items text-grey-700 tracking-widelight product-form-item border-border-default shink-0'
+                        data-id='{{ item.id }}'
+                      >
+                        <input
+                          type='number'
+                          id='Quantity-{{ section.id }}'
+                          name='updates[]'
+                          value='{{ item.quantity }}'
+                          min='0'
+                          pattern='[0-9]*'
+                          id='updates_{{ item.id }}'
+                          style='padding:0'
+                          data-id='{{ item.id }}'
+                          class='product-form__input text-base product-form__input--quantity h-full !text-grey-700 text-center !border-0 w-1/3 !p-0 block'
+                          data-quantity-input
+                        >
+                      </div>
+
+                      <div
+                        class='w-full xl:w-auto text-right remove-item mt-2.5 xl:m-0'
+                        id='Remove-{{ item.index | plus: 1 }}'
+                        data-index='{{ item.index | plus: 1 }}'
+                        class='w-full text-center remove-item'
+                      >
+                        <a
+                          href='#'
+                          class='p-0 m-0 text-sm font-normal underline delete text-grey-700 tracking-widelight link'
+                          data-cart-item='{{ item.index | plus: 1 }}'
+                          data-cart-remove
+                          id='remove_{{ item.id }}'
+                          data-label='{{ item.title }}'
+                          >Remove
+                        </a>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div
+                brauz-id='cart-item-message'
+                brauz-data-cart-item-id='{{ item.id }}'
+                class='w-full mt-4'
+              ></div>
+            </div>
+          {%- endfor -%}
+        </section>
+
+        <!-- Order summary -->
+        <section
+          aria-labelledby='summary-heading'
+          class='w-full max-w-full mt-8 xl:mt-0 xl:max-w-[360px] cart-sumary'
+        >
+          {%- if settings.enable_brauz -%}
+            <!-- Order Brauz -->
+            <img
+              id='brauz-shopify-cart-change-listener'
+              src=''
+              style='display: none;'
+              onload='window.Brauz_shopify_helper_setupFindInStoreComponentInCart()'
+              onerror='window.Brauz_shopify_helper_setupFindInStoreComponentInCart()'
+
+            ></img>
+            <div
+              id='brauz-click-and-collect-config-cart-page'
+              data-sd='{{ shop.permanent_domain }}'
+              style='display: none; width: 0'
+            ></div>
+            <div id='brauz-click-and-collect-cart-page'></div>
+          {%- endif -%}
+
+          <!-- Order free shipping -->
+          {%- assign totalMoney = cart.total_price -%}
+          {% assign cart_shipping_fee = settings.cart_shipping_fee
+            | times: 100
+          %}
+          {%- if totalMoney > cart_shipping_fee -%}
+            <div class='bg-[#E2F7E8] py-3 px-5 flex items-center gap-x-3'>
+              {% render 'icon-truck', class: 'w-5 h-5' %}
+              <p class='p-0 m-0 font-normal text-brand-text-grey tracking-widelight'>
+                You qualify for
+                <span class='text-base font-semibold uppercase text-brand-text-grey tracking-widelight'
+                  >FREE</span
+                >
+                delivery
+              </p>
+            </div>
+          {%- endif -%}
+          <dl class='mt-5 lg:mt-6'>
+            {% assign totalDifference = cart.total_discount %}
+            {% for item in cart.items %}
+              {% assign prod = item.product %}
+
+              {% if prod.compare_at_price > item.final_price %}
+                {% assign difference = prod.compare_at_price
+                  | minus: item.final_price
+                %}
+                {% assign diffByQty = difference | times: item.quantity %}
+                {% assign totalDifference = totalDifference | plus: diffByQty %}
+              {% endif %}
+            {% endfor %}
+            {% if totalDifference > 0 %}
+              <div class='flex items-center justify-between mb-0.5'>
+                <span class='p-0 m-0 text-base text-brand-text-grey tracking-widelight'>
+                  Subtotal
+                </span>
+                <span class='p-0 m-0 text-base text-brand-text-grey tracking-widelight'>
+                  {{- totalDifference | plus: cart.total_price | money -}}
+                </span>
+              </div>
+              <div class='flex items-center justify-between mb-1.5'>
+                <span class='p-0 m-0 text-base text-brand-text-grey tracking-widelight'>
+                  Discounts
+                </span>
+                <span class='p-0 m-0 text-base tracking-widelight text-brand-accent-sale'>
+                  -
+                  {{- totalDifference | money -}}
+                </span>
+              </div>
+            {% endif %}
+            <div class='flex items-center justify-between mb-1.5'>
+              <dt class='p-0 m-0 text-base font-semibold text-brand-text-grey tracking-widelight'>
+                {{ 'cart.order_total' | t }}
+              </dt>
+              <dd class='p-0 m-0 text-base font-semibold text-brand-text-grey tracking-widelight'>
+                {{ cart.total_price | money }}
+              </dd>
+            </div>
+            <div class='block p-0 m-0 text-sm italic text-grey-700 tracking-widelight'>
+              {{ 'cart.order_message_shipping' | t }}
+            </div>
+          </dl>
+          <div class='mt-4'>
+            {% render 'checkout-submit', style: 'cart' %}
+          </div>
+          {% if additional_checkout_buttons %}
+            <div class=''>
+              {{ content_for_additional_checkout_buttons }}
+            </div>
+          {% endif %}
+          {% assign content_blocks = section.blocks
+            | where: 'type', 'order_total_block'
+          %}
+
+          {% for content_block in content_blocks %}
+            <div class='bg-[#F6F6F6] p-5 rounded-[10px] flex items-center gap-x-6 mt-5 lg:mt-6'>
+              <img
+                src='{{ content_block.settings.image | image_url }}'
+                class='size-16 shrink-0'
+              >
+              <div>
+                <h4 class='p-0 m-0 text-base text-brand-text-grey tracking-widelight'>
+                  {{ content_block.settings.title }}
+                </h4>
+                <a
+                  href='{{ content_block.settings.link_url }}'
+                  class='block p-0 m-0 mt-2 text-base font-semibold underline tracking-widelight w-max link'
+                >
+                  {{ content_block.settings.link_text }}
+                </a>
+              </div>
+            </div>
+          {% endfor %}
+        </section>
+      </div>
+    </div>
+  </div>
+{%- else -%}
+  <div
+    class='flex items-center justify-center max-w-7xl mx-auto px-4 py-10 lg:py-[120px] h-full border-b border-border-default'
+    id='cart-template'
+  >
+    <div class='block w-full text-center'>
+      <h1 class='p-0 m-0 mb-6 text-xl font-semibold leading-7 normal-case text-brand-text-grey lg:text-2xl lg:leading-9'>
+        {{ 'cart.title_empty' | t }}
+      </h1>
+      <div class='block box-continues-shopping'>
+        <a
+          href='{{ routes.all_products_collection_url }}'
+          class='w-64 w-full btn btn-primary h-14'
+        >
+          {{- 'cart.continue_shopping' | t -}}
+        </a>
+      </div>
+    </div>
+  </div>
+{%- endif -%}
+
+<!-- Searchspring IntelliSuggest Tracking -->
+{% if cart.item_count > 0 %}
+  <script
+    type='text/javascript'
+    src='//cdn.searchspring.net/intellisuggest/is.min.js'
+  ></script>
+  <script type='text/javascript'>
+    try{
+        var seed = [];
+        {% for item in cart.items %}
+            seed.push("{{ item.sku }}");
+        {% endfor %}
+        IntelliSuggest.init({siteId: window.siteId, context:"Basket", seed:seed });
+        if (window.customerId != 'null') {
+          IntelliSuggest.setShopperId(window.customerId);
+        }
+        {% for item in cart.items %}
+            IntelliSuggest.haveItem({sku:"{{ item.sku }}", qty:"{{ item.quantity }}", price:"{{ item.price | money_without_currency }}"});
+        {% endfor %}
+        IntelliSuggest.inBasket({});
+    } catch(err) {}
+  </script>
+{% endif %}
+<!-- END Searchspring IntelliSuggest -->
+
+{% schema %}
+{
+  "name": "Template Cart",
+  "settings": [
+    {
+      "type": "text",
+      "id": "vouchers_title",
+      "label": "Voucher Title",
+      "default": "Peppercorn Loyalty Program"
+    },
+    {
+      "type": "text",
+      "id": "vouchers_info",
+      "label": "Vouchers Info",
+      "default": "You may have rewards to claim!"
+    }
+  ],
+  "blocks": [
+    {
+      "type": "subtotal",
+      "name": "Subtotal",
+      "limit": 1
+    },
+    {
+      "type": "update_button",
+      "name": "Update Button",
+      "limit": 1
+    },
+    {
+      "type": "checkout_button",
+      "name": "Checkout Button",
+      "limit": 1
+    },
+    {
+      "type": "order_total_block",
+      "name": "After Total Block",
+      "settings": [
+        {
+          "type": "text",
+          "id": "title",
+          "label": "Title",
+          "default": "Over 100 Stores Across Australia & NZ"
+        },
+        {
+          "type": "text",
+          "id": "link_text",
+          "label": "Link Text",
+          "default": "Find Your Nearest Store"
+        },
+        {
+          "type": "url",
+          "id": "link_url",
+          "label": "Link URL"
+        },
+        {
+          "type": "image_picker",
+          "id": "image",
+          "label": "Icon"
+        }
+      ]
+    }
+  ]
+}
+{% endschema %}
